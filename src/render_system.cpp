@@ -7,16 +7,16 @@
 void RenderSystem::drawTexturedMesh(Entity entity,
 									const mat3 &projection)
 {
-	Motion &motion = registry.motions.get(entity);
+	Object &object = registry.objects.get(entity);
 	// Transformation code, see Rendering and Transformation in the template
 	// specification for more info Incrementally updates transformation matrix,
 	// thus ORDER IS IMPORTANT
 	// order when applying to object is scaling, rotating, translating ((objpos * S) * R ) * T
 	// so we need to construct the matrix in reverse order, T * R * S, so when we left-multiply with objpos, it's TRS*objpos
 	Transform transform;
-	transform.translate(motion.position);
-	transform.rotate(motion.angle);
-	transform.scale(motion.scale);
+	transform.translate(object.position);
+	transform.rotate(object.angle);
+	transform.scale(object.scale);
 	// !!! DONE A1: add rotation to the chain of transformations, mind the order
 	// of transformations
 

@@ -25,6 +25,9 @@ public:
 	ComponentContainer<vec3> colors;
 	ComponentContainer<LightUp> lightUps;
 	ComponentContainer<Attractor> attractors;
+	ComponentContainer<Object> objects;
+	ComponentContainer<BoundingBox> boundingBoxes;
+	ComponentContainer<BoundingLine> boundingLines;
 
 	// constructor that adds all containers for looping over them
 	// IMPORTANT: Don't forget to add any newly added containers!
@@ -44,6 +47,9 @@ public:
 		registry_list.push_back(&colors);
 		registry_list.push_back(&lightUps);
 		registry_list.push_back(&attractors);
+		registry_list.push_back(&objects);	
+		registry_list.push_back(&boundingBoxes);
+		registry_list.push_back(&boundingLines);
 	}
 
 	void clear_all_components() {

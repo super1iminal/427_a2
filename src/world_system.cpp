@@ -60,6 +60,10 @@ namespace {
 	}
 }
 
+float WorldSystem::get_current_speed() const {
+	return current_speed;
+}
+
 // World initialization
 // Note, this has a lot of OpenGL specific things, could be moved to the renderer
 GLFWwindow* WorldSystem::create_window() {
@@ -148,21 +152,21 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	    registry.remove_all_components_of(registry.debugComponents.entities.back());
 
 	// Removing out of screen entities
-	auto& motions_registry = registry.motions;
+	auto& objects_registry = registry.objects;
 
 	// Remove entities that leave the screen on the left side
 	// Iterate backwards to be able to remove without interfering with the next object to visit
 	// (the containers exchange the last element with the current)
-	for (int i = (int)motions_registry.components.size()-1; i>=0; --i) {
-	    Motion& motion = motions_registry.components[i];
-		if ((motion.position.x + abs(motion.scale.x) < 0.f) || (motion.position.y + abs(motion.scale.y) > window_height_px + 100)) {
-			if(!registry.players.has(motions_registry.entities[i])) // don't remove the player
-				registry.remove_all_components_of(motions_registry.entities[i]);
+	for (int i = (int)objects_registry.components.size()-1; i>=0; --i) {
+	    Object& object = objects_registry.components[i];
+		if ((object.position.x + abs(object.scale.x) < 0.f) || (object.position.y + abs(object.scale.y) > window_height_px + 100)) {
+			if(!registry.players.has(objects_registry.entities[i])) // don't remove the player
+				registry.remove_all_components_of(objects_registry.entities[i]);
 		}
 	}
 
 	// spawn new eels
-	next_eel_spawn -= elapsed_ms_since_last_update * current_speed;
+	next_eel_spawn -= elapsed_ms_since_last_update;
 	if (registry.deadlys.components.size() <= MAX_NUM_EELS && next_eel_spawn < 0.f) {
 		// reset timer
 		next_eel_spawn = (EEL_SPAWN_DELAY_MS / 2) + uniform_dist(rng) * (EEL_SPAWN_DELAY_MS / 2);
@@ -173,7 +177,7 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	}
 
 	// spawn fish
-	next_fish_spawn -= elapsed_ms_since_last_update * current_speed;
+	next_fish_spawn -= elapsed_ms_since_last_update;
 	if (registry.eatables.components.size() <= MAX_NUM_FISH && next_fish_spawn < 0.f) {
 		// !!!  TODO A1: create new fish with createFish({0,0}), see eels above (done)
 		next_fish_spawn = (FISH_SPAWN_DELAY_MS / 2) + uniform_dist(rng) * (FISH_SPAWN_DELAY_MS / 2);
@@ -183,13 +187,13 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	// advanced mechanics
 	if (state == 1) {
 		// spawn whirlpools
-		next_whirl_spawn -= elapsed_ms_since_last_update * current_speed;
+		next_whirl_spawn -= elapsed_ms_since_last_update;
 		if (registry.attractors.components.size() <= MAX_NUM_WHIRL && next_whirl_spawn < 0.f) {
 			next_whirl_spawn = (WHIRLPOOL_SPAWN_DELAY_MS / 2) + uniform_dist(rng) * (WHIRLPOOL_SPAWN_DELAY_MS / 2);
 			createWhirlpool(renderer, vec2((window_width_px-100) * uniform_dist(rng) + 50, (window_height_px-70) * uniform_dist(rng) + 35), uniform_dist(rng) + 0.25);
 		}
 
-		next_puffer_spawn -= elapsed_ms_since_last_update * current_speed;
+		next_puffer_spawn -= elapsed_ms_since_last_update;
 		if (next_puffer_spawn < 0.f) {
 			next_puffer_spawn = (PUFFER_SPAWN_DELAY_MS / 2) + uniform_dist(rng) * (PUFFER_SPAWN_DELAY_MS / 2);
 			createPuffer(renderer, vec2((window_width_px)*uniform_dist(rng), window_height_px), uniform_dist(rng) - 0.5f, uniform_dist(rng));
@@ -197,14 +201,6 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 
 
 	}
-
-	// spawn pufferfish and change their trajectories
-
-
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// TODO A2: HANDLE EGG SPAWN HERE
-	// DON'T WORRY ABOUT THIS UNTIL ASSIGNMENT 2
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	// Processing the salmon state
 	// Added functionality to remove dead entities
@@ -227,7 +223,7 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 				restart_game();
 				if (state == 1) {
 					for (Entity player : registry.players.entities) {
-						registry.motions.get(player).scale /= 1.5f;
+						registry.objects.get(player).scale /= 1.5f;
 					}
 				}
 				return true;
@@ -253,8 +249,62 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 			registry.lightUps.remove(entity);
 		}
 	}
+	
+	// update bounding boxes
+	update_bounding_boxes();
+
+	// update bounding lines
+	update_bounding_lines();
 
 	return true;
+}
+
+
+void WorldSystem::update_bounding_boxes() {
+	for (Entity entity : registry.boundingBoxes.entities) {
+		BoundingBox& bb = registry.boundingBoxes.get(entity);
+		Object& object = registry.objects.get(entity);
+		vec4 bb_info = calculate_AABB(object);
+		bb.bounding_box = vec2(bb_info.x, bb_info.y);
+		bb.pos = vec2(bb_info.z, bb_info.w);
+	}
+	return;
+}
+
+void WorldSystem::update_bounding_lines() {
+	// remember to check if entity exists before updating!!
+	for (Entity entity : registry.boundingLines.entities) {
+		BoundingLine& bl = registry.boundingLines.get(entity);
+		Object& object = registry.objects.get(entity);
+		Entity entity_bb = bl.entity;
+		// check if registry still has the bounding box
+		if (!registry.boundingBoxes.has(entity_bb)) {
+			printf("bounding line skipped ");
+
+			continue;
+		}
+		// if so, continue
+		BoundingBox& bb = registry.boundingBoxes.get(entity_bb);
+		switch (bl.position) {
+		case BOUNDING_LINE_POS::TOP:
+			object.position = vec2(bb.pos.x, bb.pos.y - (bb.bounding_box.y / 2));
+			object.scale = vec2(bb.bounding_box.x, 10);
+			break;
+		case BOUNDING_LINE_POS::BOTTOM:
+			object.position = vec2(bb.pos.x, bb.pos.y + (bb.bounding_box.y / 2));
+			object.scale = vec2(bb.bounding_box.x, 10);
+			break;
+		case BOUNDING_LINE_POS::LEFT:
+			object.position = vec2(bb.pos.x - (bb.bounding_box.x / 2), bb.pos.y);
+			object.scale = vec2(10, bb.bounding_box.y);
+			break;
+		case BOUNDING_LINE_POS::RIGHT:
+			object.position = vec2(bb.pos.x + (bb.bounding_box.x / 2), bb.pos.y);
+			object.scale = vec2(10, bb.bounding_box.y);
+			break;
+		}
+	}
+	return;
 }
 
 // Reset the world state to its initial state
@@ -284,20 +334,6 @@ void WorldSystem::restart_game() {
 	next_eel_spawn = 0.f;
 	next_whirl_spawn = 0.f;
 	next_puffer_spawn = 0.f;
-
-	// !! TODO A2: Enable static eggs on the ground, for reference
-	// Create eggs on the floor, use this for reference
-	/*
-	for (uint i = 0; i < 20; i++) {
-		int w, h;
-		glfwGetWindowSize(window, &w, &h);
-		float radius = 30 * (uniform_dist(rng) + 0.3f); // range 0.3 .. 1.3
-		Entity egg = createEgg({ uniform_dist(rng) * w, h - uniform_dist(rng) * 20 },
-			         { radius, radius });
-		float brightness = uniform_dist(rng) * 0.5 + 0.5;
-		registry.colors.insert(egg, { brightness, brightness, brightness});
-	}
-	*/
 }
 
 // Compute collisions between entities
@@ -322,11 +358,10 @@ void WorldSystem::handle_collisions() {
 					Mix_PlayChannel(-1, salmon_dead_sound, 0);
 					assert(registry.motions.has(entity) && "Player does not have motion!");
 					Motion& motion = registry.motions.get(entity);
-
-					// !!! TODO A1: change the salmon's orientation and color on death
+					Object& object = registry.objects.get(entity);
 
 					// change orientation
-					motion.angle = 0.f;
+					object.angle = 0.f;
 					motion.input_velocity.y = -100.f;
 					motion.input_velocity.x = 0.f;
 
@@ -361,7 +396,8 @@ void WorldSystem::handle_collisions() {
 					registry.deathTimers.emplace(entity_other);
 					Mix_PlayChannel(-1, salmon_dead_sound, 0);
 					Motion& motion = registry.motions.get(entity_other);
-					motion.angle = M_PI;
+					Object& object = registry.objects.get(entity_other);
+					object.angle = M_PI;
 					motion.input_velocity.y = 100.f;
 					motion.input_velocity.x = 0.f;
 					motion.acceleration = { 0,0 };
@@ -386,13 +422,6 @@ bool WorldSystem::is_over() const {
 
 // On key callback
 void WorldSystem::on_key(int key, int, int action, int mod) {
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// TODO A1: HANDLE SALMON MOVEMENT HERE
-	// key is of 'type' GLFW_KEY_
-	// action can be GLFW_PRESS GLFW_RELEASE GLFW_REPEAT
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 	// handling keypresses:
 	if (registry.players.entities.size() > 0 && !registry.deathTimers.has(registry.players.entities[0])) {
 		// Member variables to keep track of key states
@@ -444,7 +473,7 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 		state = 1;
 		restart_game();
 		for (Entity player : registry.players.entities) {
-			registry.motions.get(player).scale /= 1.5f;
+			registry.objects.get(player).scale /= 1.5f;
 		}
 	}
 
@@ -465,7 +494,7 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
         restart_game();
 		if (state == 1) {
 			for (Entity player : registry.players.entities) {
-				registry.motions.get(player).scale /= 1.5f;
+				registry.objects.get(player).scale /= 1.5f;
 			}
 		}
 	}
@@ -477,13 +506,12 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 		else
 			debugging.in_debug_mode = true;
 	}
-
 	// Control the current speed with `<` `>`
-	if (action == GLFW_RELEASE && (mod & GLFW_MOD_SHIFT) && key == GLFW_KEY_COMMA) {
+	if (action == GLFW_RELEASE && (key == GLFW_KEY_MINUS)) {
 		current_speed -= 0.1f;
 		printf("Current speed = %f\n", current_speed);
 	}
-	if (action == GLFW_RELEASE && (mod & GLFW_MOD_SHIFT) && key == GLFW_KEY_PERIOD) {
+	if (action == GLFW_RELEASE && (((mod & GLFW_MOD_SHIFT) && key == GLFW_KEY_EQUAL) || (key == GLFW_KEY_EQUAL))) {
 		current_speed += 0.1f;
 		printf("Current speed = %f\n", current_speed);
 	}
@@ -491,13 +519,6 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 }
 
 void WorldSystem::on_mouse_move(vec2 mouse_position) {
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// TODO A1: HANDLE SALMON ROTATION HERE
-	// xpos and ypos are relative to the top-left of the window, the salmon's
-	// default facing direction is (1, 0)
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// we translate first, so rotation doesn't affect translation. we could rotate first, though, which would be GREAT. see render_system.cpp
-
 	/*
 	basic math:
 	tan theta = opposite / adjacent
@@ -513,10 +534,10 @@ void WorldSystem::on_mouse_move(vec2 mouse_position) {
 	if (registry.players.entities.size() > 0 && !registry.deathTimers.has(registry.players.entities[0])) {
 		assert(registry.players.entities.size() > 0 && "No player found for rotating.");
 		Entity& player_salmon = registry.players.entities[0]; // just gonna use the first player in the players ComponentContainer
-		Motion& motion = registry.motions.get(player_salmon);
+		Object& object = registry.objects.get(player_salmon);
 
-		vec2 diff = motion.position - mouse_position;
+		vec2 diff = object.position - mouse_position;
 		float angle = atan2(diff.y, diff.x); // opposite, adjacent
-		motion.angle = angle;
+		object.angle = angle;
 	}
 }

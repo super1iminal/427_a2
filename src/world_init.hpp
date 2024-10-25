@@ -14,6 +14,8 @@ const float WHIRL_BB_WIDTH = 0.6f * 200.f;	// 1001
 const float WHIRL_BB_HEIGHT = 0.6f * 200.f;	// 1001
 const size_t WHIRLPOOL_DEATH_TIMER = 18000.f;
 
+const float FISH_SPEED = 50.f;
+
 // the player
 Entity createSalmon(RenderSystem* renderer, vec2 pos);
 
@@ -32,7 +34,9 @@ Entity createWhirlpool(RenderSystem* renderer, vec2 position, float rand);
 // a red line for debugging purposes
 Entity createLine(vec2 position, vec2 size);
 
-// a egg
-Entity createEgg(vec2 pos, vec2 size);
+// create a bounding box for an object
+void createTrackerLines(Entity entity);
 
+// calculate the AABB of an object
+vec4 calculate_AABB(Object& obj);
 

@@ -47,3 +47,11 @@ struct Transform {
 };
 
 bool gl_has_errors();
+
+
+enum class BOUNDING_LINE_POS {
+	TOP,
+	BOTTOM,
+	LEFT,
+	RIGHT
+};

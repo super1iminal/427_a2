@@ -4,9 +4,8 @@ Comments to TA about your implementation:
 - I reset points on game restart, and reset timers for spawns
 
 ## Custom Features
-Salmon Additions:
-- I added 2 new fins (2 faces). These fins are the fin at the bottom and the fin on the side, both red. The .obj file has comments with the locations of the new vertices and the new faces.
-
+SpeedUp:
+- I added the speeding up in main
 Advanced Mode:
 - I added whirlpools that attract everything and kill everything that touches them (playing a death sound when other entities die). They despawn after WHIRLPOOL_DEATH_TIMER. They have a random force that drawns in everything nearby. They also have a random radius of effect and size.
 - I also took the creative liberty of reducing the massive salmon's size, since it made the game unplayable in advanced mode.

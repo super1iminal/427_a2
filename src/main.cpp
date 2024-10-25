@@ -44,7 +44,7 @@ int main()
 		float elapsed_ms =
 			(float)(std::chrono::duration_cast<std::chrono::microseconds>(now - t)).count() / 1000;
 		t = now;
-
+		elapsed_ms = elapsed_ms * world.get_current_speed();
 		world.step(elapsed_ms);
 		physics.step(elapsed_ms);
 		world.handle_collisions();
