@@ -43,8 +43,12 @@ struct BoundingBox {
 struct BoundingLine {
 	BOUNDING_LINE_POS position = BOUNDING_LINE_POS::TOP;
 	Entity entity; // not passed by reference, so it's a copy
+	BoundingLine(BOUNDING_LINE_POS position, Entity& entity) : position(position), entity(entity) {};
 };
 
+struct PendingRemove {
+
+};
 
 // Stucture to store collision information
 struct Collision

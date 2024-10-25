@@ -28,6 +28,7 @@ public:
 	ComponentContainer<Object> objects;
 	ComponentContainer<BoundingBox> boundingBoxes;
 	ComponentContainer<BoundingLine> boundingLines;
+	ComponentContainer<PendingRemove> pendingRemoves;
 
 	// constructor that adds all containers for looping over them
 	// IMPORTANT: Don't forget to add any newly added containers!
@@ -50,6 +51,7 @@ public:
 		registry_list.push_back(&objects);	
 		registry_list.push_back(&boundingBoxes);
 		registry_list.push_back(&boundingLines);
+		registry_list.push_back(&pendingRemoves);
 	}
 
 	void clear_all_components() {

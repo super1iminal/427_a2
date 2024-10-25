@@ -148,8 +148,8 @@ bool WorldSystem::step(float elapsed_ms_since_last_update) {
 	glfwSetWindowTitle(window, title_ss.str().c_str());
 
 	// Remove debug info from the last step
-	while (registry.debugComponents.entities.size() > 0)
-	    registry.remove_all_components_of(registry.debugComponents.entities.back());
+	//while (registry.debugComponents.entities.size() > 0)
+	//    registry.remove_all_components_of(registry.debugComponents.entities.back());
 
 	// Removing out of screen entities
 	auto& objects_registry = registry.objects;
@@ -273,14 +273,14 @@ void WorldSystem::update_bounding_boxes() {
 
 void WorldSystem::update_bounding_lines() {
 	// remember to check if entity exists before updating!!
+	int count_skipped = 0;
 	for (Entity entity : registry.boundingLines.entities) {
 		BoundingLine& bl = registry.boundingLines.get(entity);
 		Object& object = registry.objects.get(entity);
 		Entity entity_bb = bl.entity;
 		// check if registry still has the bounding box
 		if (!registry.boundingBoxes.has(entity_bb)) {
-			printf("bounding line skipped ");
-
+			registry.remove_all_components_of(entity);
 			continue;
 		}
 		// if so, continue
@@ -329,6 +329,10 @@ void WorldSystem::restart_game() {
 	player_salmon = createSalmon(renderer, {0,0});
 	registry.colors.emplace(player_salmon, vec3(1, 0.8f, 0.8f));
 
+	// make a line
+	Entity line = createLine(vec2(window_width_px/2, window_height_px/2), vec2(500, 10));
+
+	// Reset the points
 	points = 0;
 	next_fish_spawn = 0.f;
 	next_eel_spawn = 0.f;
@@ -506,6 +510,10 @@ void WorldSystem::on_key(int key, int, int action, int mod) {
 		else
 			debugging.in_debug_mode = true;
 	}
+	if (key == GLFW_KEY_L && action == GLFW_RELEASE) {
+		registry.list_all_components();
+	}
+
 	// Control the current speed with `<` `>`
 	if (action == GLFW_RELEASE && (key == GLFW_KEY_MINUS)) {
 		current_speed -= 0.1f;

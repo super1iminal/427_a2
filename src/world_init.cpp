@@ -220,24 +220,16 @@ void createTrackerLines(Entity entity) {
 	printf("for bounding box with position %f %f and size %f %f\n", bb.pos.x, bb.pos.y, bb.bounding_box.x, bb.bounding_box.y);
 	// top line
 	Entity line = createLine(vec2(bb.pos.x, bb.pos.y-(bb.bounding_box.y/2)), { bb.bounding_box.x, 10 });
-	BoundingLine bl = registry.boundingLines.emplace(line);
-	bl.position = BOUNDING_LINE_POS::TOP;
-	bl.entity = entity;
+	registry.boundingLines.emplace(line, BOUNDING_LINE_POS::TOP, entity);
 	// bottom line
 	line = createLine(vec2(bb.pos.x, bb.pos.y + (bb.bounding_box.y / 2)), { bb.bounding_box.x, 10 });
-	bl = registry.boundingLines.emplace(line);
-	bl.position = BOUNDING_LINE_POS::BOTTOM;
-	bl.entity = entity;
+	registry.boundingLines.emplace(line, BOUNDING_LINE_POS::BOTTOM, entity);
 	// left line
 	line = createLine(vec2(bb.pos.x - (bb.bounding_box.x / 2), bb.pos.y), { 10, bb.bounding_box.y });
-	bl = registry.boundingLines.emplace(line);
-	bl.position = BOUNDING_LINE_POS::LEFT;
-	bl.entity = entity;
+	registry.boundingLines.emplace(line, BOUNDING_LINE_POS::LEFT, entity);
 	// right line
 	line = createLine(vec2(bb.pos.x + (bb.bounding_box.x / 2), bb.pos.y), { 10, bb.bounding_box.y });
-	bl = registry.boundingLines.emplace(line);
-	bl.position = BOUNDING_LINE_POS::RIGHT;
-	bl.entity = entity;
+	registry.boundingLines.emplace(line, BOUNDING_LINE_POS::RIGHT, entity);
 
 	return;
 }
